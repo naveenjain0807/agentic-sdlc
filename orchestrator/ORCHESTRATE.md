@@ -28,7 +28,7 @@ hit a surprise. For the *why* behind the design, see
 
    This should finish green. If it fails to even *parse* (`[FATAL] Non-parseable
    POM ...`), don't proceed into a run — fix that first as its own prerequisite
-   commit (see §6, this has happened before in this exact repo).
+   commit (see §7, this has happened before in this exact repo).
 4. **Run Claude Code from the repo root** (`claude`), so `.claude/skills/` and
    `.claude/commands/` are picked up. If typing a skill name by itself doesn't
    trigger it, use the explicit `/sdlc-run`, `/sdlc-decompose`, etc. slash commands
@@ -57,7 +57,50 @@ questions and approving gates/commits as they come up.
 Use the granular path when you want to review or hand-edit the task graph before
 any code is touched.
 
-## 2. What happens, phase by phase
+## 2. Flow at a glance
+
+Double-bordered boxes (`[[ ]]`) are the points where the run stops and waits on
+you — everything else proceeds on its own.
+
+```mermaid
+flowchart TD
+    Start([Your request]) --> Decompose[Phase 1 — Decompose:\nread the code first, then classify]
+    Decompose --> Ambiguous{Ambiguous?}
+    Ambiguous -- yes --> AskAmbiguous[[Ask you a\nclarifying question]]
+    AskAmbiguous --> Decompose
+    Ambiguous -- no --> Graph[graph.yaml written:\nnodes + acceptance criteria + gates]
+
+    Graph --> Loop[Phase 2 — Orchestrate loop]
+    Loop --> Ready{Any node ready?\ndeps satisfied}
+    Ready -- none ready, none pending --> Complete[Graph complete]
+    Ready -- one or more ready --> Gate{Node's gate?}
+
+    Gate -- human-approval --> AskGate[[Ask you to approve\nnode + blast radius]]
+    AskGate --> Dispatch[Dispatch Agent worker\nparallel if independent]
+    Gate -- policy-check --> PolicyCheck{Passes POLICY.md\nbaseline checks?}
+    PolicyCheck -- yes --> Dispatch
+    PolicyCheck -- no --> Failed[Treated as a failed run]
+    Gate -- auto --> Dispatch
+
+    Dispatch --> ExitGate{Exit gate:\nre-check acceptance\ncriterion yourself}
+    ExitGate -- pass --> AskCommit[[Ask you to approve\nthe diff + commit]]
+    AskCommit --> Commit[Commit this node's change]
+    Commit --> Loop
+    ExitGate -- fail --> Failed
+
+    Failed --> Retry{Retried\n< 2 times?}
+    Retry -- yes, with failure context --> Dispatch
+    Retry -- no --> Fallback{Narrower fallback\nexists?}
+    Fallback -- yes --> Dispatch
+    Fallback -- no --> AskRevert[[Ask you to approve\ngit revert]]
+    AskRevert --> Blocked[Mark node + dependents blocked]
+    Blocked --> SafeStop[[Safe-stop: ask you\nretry / skip / abort]]
+
+    Complete --> Validate[Phase 3 — Validate:\nmvn test + re-check every criterion]
+    Validate --> Summarize[Phase 4 — Summarize:\nsummary.md for review]
+```
+
+## 3. What happens, phase by phase
 
 ### Phase 1 — decompose
 The request is **never** classified from its wording alone — the skill reads the
@@ -97,7 +140,7 @@ Rolls `graph.yaml` + `orchestration-log.md` + `metrics.json` +
 artifacts produced, validation verdict, risks/trade-offs, assumptions,
 limitations, reliability metrics. This is the document to hand to a reviewer.
 
-## 3. What you'll be asked to approve, and when
+## 4. What you'll be asked to approve, and when
 
 | When | What you see |
 |---|---|
@@ -110,7 +153,7 @@ limitations, reliability metrics. This is the document to hand to a reviewer.
 Approving one commit or gate does not pre-approve the next one — expect to be
 asked at each of these points, every run.
 
-## 4. Reading the artifacts afterward
+## 5. Reading the artifacts afterward
 
 Everything a run produces lives in `orchestrator/runs/<slug>/`:
 
@@ -125,7 +168,7 @@ Everything a run produces lives in `orchestrator/runs/<slug>/`:
 `git log` on the commits made during the run is the audit trail; `git revert` on
 any of them is the rollback mechanism.
 
-## 5. Worked example (real run in this repo)
+## 6. Worked example (real run in this repo)
 
 `orchestrator/runs/health-check-ping-endpoint/` is a completed run for the request
 *"add a health-check ping endpoint that returns the current server time."*
@@ -153,7 +196,7 @@ any of them is the rollback mechanism.
 
 Read `orchestration-log.md` in that directory for the full event-by-event trace.
 
-## 6. Troubleshooting / known gotchas
+## 7. Troubleshooting / known gotchas
 
 - **`mvn` fails with `[FATAL] Non-parseable POM ... in comment after two dashes
   (--)`.** This is illegal XML — a literal `--` inside an `<!-- ... -->` comment
@@ -177,7 +220,7 @@ Read `orchestration-log.md` in that directory for the full event-by-event trace.
   [`POLICY.md`](POLICY.md) regardless of how small the change looks — expect an
   explicit approval prompt, every time, no exceptions.
 
-## 7. More detail
+## 8. More detail
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — orchestration model, control-flow diagram, key design decisions
 - [`POLICY.md`](POLICY.md) — gate levels and the categories that always require `human-approval`
