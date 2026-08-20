@@ -20,7 +20,7 @@
 
     <modules>
         <!-- the shortener is the target system; the orchestration layer is Claude Code
-             skills under .claude/skills/, not a second Maven module -- see orchestrator/ -->
+             skills under .claude/skills/, not a second Maven module; see orchestrator/ -->
         <module>url-shortener-service</module>
     </modules>
 
