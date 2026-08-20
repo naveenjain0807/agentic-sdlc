@@ -260,9 +260,16 @@ plain-English request into an evidence-based, gated, auditable change to the tar
 system. No separate service, no LLM API key — the orchestration engine is Claude
 Code itself, invoked through these skills.
 
-**Prerequisite**: run `claude` from this repo's root so the project skills in
-`.claude/skills/` are picked up, and keep the working tree clean before invoking
-`sdlc-orchestrate` (it commits per step and needs git for rollback/audit).
+**Prerequisite**: run `claude` from this repo's root, and keep the working tree
+clean before invoking `sdlc-orchestrate` or `sdlc-run` (they commit per step and
+need git for rollback/audit).
+
+**Invocation**: skills under `.claude/skills/` aren't slash commands by themselves —
+Claude Code auto-invokes them when your request matches a skill's description, or
+you can name one directly ("use the sdlc-run skill to add..."). For a guaranteed
+`/sdlc-run "..."` slash command, this repo also ships thin wrappers under
+`.claude/commands/` that point at each skill; use those if typing the skill name
+alone doesn't trigger it.
 
 | Skill | Purpose | Example |
 |---|---|---|
