@@ -1,0 +1,28 @@
+services:
+  url-shortener:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agentic/url-shortener-service:0.1.0
+    container_name: url-shortener
+    ports:
+      - "8080:8080"
+    environment:
+      # Short links are rendered against this base URL.
+      APP_BASE_URL: http://localhost:8080
+      # H2 in-memory. To keep data across restarts, mount a volume and use:
+      # SPRING_DATASOURCE_URL: jdbc:h2:file:/data/urlshortener;DB_CLOSE_ON_EXIT=FALSE
+      SPRING_DATASOURCE_URL: jdbc:h2:mem:urlshortener;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+      JAVA_OPTS: -XX:MaxRAMPercentage=75.0
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 45s
+    restart: unless-stopped
+    # volumes:
+    #   - shortener-data:/data
+
+# volumes:
+#   shortener-data:
