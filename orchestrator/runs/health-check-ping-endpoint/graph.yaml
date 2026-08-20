@@ -1,0 +1,55 @@
+run:
+  slug: health-check-ping-endpoint
+  request: "add a health-check ping endpoint that returns the current server time"
+  mode: greenfield
+  created_at: 2026-08-20T21:51:48Z
+analysis:
+  summary: >
+    No existing controller in com.agentic.urlshortener.web exposes a ping/health
+    endpoint that returns server time. spring-boot-starter-actuator is already a
+    pom.xml dependency (provides /actuator/health), but that endpoint reports
+    component status (UP/DOWN), not the current server time, so it does not
+    satisfy this request and no actuator config needs to change. Existing
+    controllers (UrlController, AnalyticsController) use /api/v1/... prefixes,
+    @RestController, and return typed DTOs from web/dto/; HomeController shows
+    the pattern for a small no-dependency @RestController with a single
+    @GetMapping. There is no overlap with existing behavior — this is a wholly
+    new, additive endpoint.
+  files_examined:
+    - url-shortener-service/src/main/java/com/agentic/urlshortener/web/HomeController.java
+    - url-shortener-service/src/main/java/com/agentic/urlshortener/web/UrlController.java
+    - url-shortener-service/src/main/java/com/agentic/urlshortener/web/AnalyticsController.java
+    - url-shortener-service/src/main/java/com/agentic/urlshortener/web/dto/
+    - url-shortener-service/pom.xml
+  existing_tests:
+    - url-shortener-service/src/test/java/com/agentic/urlshortener/web/UrlShortenerApiIntegrationTest.java
+  impacted: []
+ambiguities: []
+assumptions:
+  - question: "Should this reuse/extend Spring Boot Actuator's /actuator/health instead of a custom endpoint?"
+    answer: >
+      No — actuator health reports UP/DOWN status, not server time, and changing
+      actuator config is a production-configuration change requiring
+      human-approval per POLICY.md. A new lightweight custom endpoint
+      (GET /api/v1/ping) satisfies the literal request without touching
+      actuator/prod config.
+nodes:
+  - id: A
+    title: Add GET /api/v1/ping health-check endpoint returning current server time
+    description: >
+      Add a new PingController (@RestController) with GET /api/v1/ping, following
+      the existing controller conventions (see UrlController, HomeController). It
+      returns a small DTO (e.g. PingResponse) in web/dto/ with a status field
+      ("ok") and a timestamp field for the current server time (java.time.Instant,
+      ISO-8601 serialized, e.g. via Jackson default). No auth, no persistence, no
+      pom.xml or application.yml changes.
+    acceptance_criteria: >
+      A new test (e.g. PingControllerTest or added to the existing integration
+      test class) asserts GET /api/v1/ping returns HTTP 200 with a JSON body
+      containing a parseable ISO-8601 timestamp field and a status field, and the
+      timestamp is within a few seconds of Instant.now() at call time. `mvn -pl
+      url-shortener-service -am -q test` passes including this new test.
+    agent_type: general-purpose
+    gate: auto
+    depends_on: []
+    status: pending

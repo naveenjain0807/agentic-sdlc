@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -192,6 +193,23 @@ class UrlShortenerApiIntegrationTest {
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    @Test
+    @DisplayName("ping returns ok and a fresh server timestamp")
+    void pingReturnsOkAndCurrentTime() throws Exception {
+        Instant before = Instant.now();
+
+        MvcResult result = mockMvc.perform(get("/api/v1/ping"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ok"))
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andReturn();
+
+        Instant after = Instant.now();
+        Instant timestamp = Instant.parse(read(result).path("timestamp").asText());
+
+        assertThat(timestamp).isBetween(before.minusSeconds(5), after.plusSeconds(5));
     }
 
     // ------------------------------------------------------------------
