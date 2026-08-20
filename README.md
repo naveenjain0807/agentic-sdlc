@@ -8,8 +8,8 @@ service that creates short links, redirects them, and reports click analytics.
 * Swagger UI / OpenAPI 3 for interactive testing
 * One-command Docker run
 
-The Maven reactor root already carries a `<modules>` slot for `orchestrator-service`,
-so the orchestration layer drops in beside this module without restructuring.
+The orchestration layer lives beside this module as Claude Code skills, not a second
+Maven module — see [section 8](#8-orchestrator-skills).
 
 ---
 
@@ -230,7 +230,9 @@ locally or in CI.
 .
 ├── Dockerfile                  multi-stage: maven build -> temurin JRE runtime
 ├── docker-compose.yml
-├── pom.xml                     reactor root (orchestrator-service slots in here)
+├── pom.xml                     reactor root
+├── .claude/skills/             the sdlc-* orchestrator skills (see section 8)
+├── orchestrator/                POLICY.md, ARCHITECTURE.md, TESTING.md, scenarios/, runs/
 └── url-shortener-service/
     ├── pom.xml
     └── src/main/
@@ -246,3 +248,39 @@ locally or in CI.
             ├── application.yml
             └── db/migration/   V1, V2
 ```
+
+---
+
+## 8. Orchestrator skills
+
+The `url-shortener-service` above is the **target system**. Alongside it, this repo
+also carries an agentic SDLC orchestration layer — five parameterized [Claude
+Code](https://claude.com/claude-code) skills under `.claude/skills/` that turn a
+plain-English request into an evidence-based, gated, auditable change to the target
+system. No separate service, no LLM API key — the orchestration engine is Claude
+Code itself, invoked through these skills.
+
+**Prerequisite**: run `claude` from this repo's root so the project skills in
+`.claude/skills/` are picked up, and keep the working tree clean before invoking
+`sdlc-orchestrate` (it commits per step and needs git for rollback/audit).
+
+| Skill | Purpose | Example |
+|---|---|---|
+| `/sdlc-run` | End-to-end: decompose → orchestrate → validate → summarize | `/sdlc-run "add a QR code endpoint for short links"` |
+| `/sdlc-decompose` | Analyze the code, classify greenfield/brownfield/ambiguous, build a dependency graph | `/sdlc-decompose "add rate limiting to POST /api/v1/shorten"` |
+| `/sdlc-orchestrate` | Execute a graph: gates, parallel/sequential dispatch, retries, rollback, re-planning | `/sdlc-orchestrate orchestrator/runs/<slug>/graph.yaml` |
+| `/sdlc-validate` | Run the real test suite and check acceptance criteria + risk/trade-offs | `/sdlc-validate <slug>` |
+| `/sdlc-summarize` | Final Engineering Summary for a run | `/sdlc-summarize <slug>` |
+
+For most requests, `/sdlc-run "<what you want>"` is the only command you need — it
+stops to ask if the request is ambiguous, pauses for your approval before any step
+`orchestrator/POLICY.md` marks high-impact, and asks before every individual git
+commit or revert regardless of that gate. Drop down to the individual skills when
+you want to review or edit the decomposition before any code is touched.
+
+See [`orchestrator/ARCHITECTURE.md`](orchestrator/ARCHITECTURE.md) for the
+orchestration model and control flow, [`orchestrator/POLICY.md`](orchestrator/POLICY.md)
+for what counts as high-impact, [`orchestrator/scenarios/`](orchestrator/scenarios/)
+for worked greenfield/brownfield/ambiguous examples, and
+[`orchestrator/TESTING.md`](orchestrator/TESTING.md) for testing approach,
+limitations, and trade-offs.
