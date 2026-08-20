@@ -285,7 +285,10 @@ stops to ask if the request is ambiguous, pauses for your approval before any st
 commit or revert regardless of that gate. Drop down to the individual skills when
 you want to review or edit the decomposition before any code is touched.
 
-See [`orchestrator/ARCHITECTURE.md`](orchestrator/ARCHITECTURE.md) for the
+New to this? Start with [`orchestrator/ORCHESTRATE.md`](orchestrator/ORCHESTRATE.md) —
+a step-by-step runbook covering prerequisites, what to expect at each phase, what
+you'll be asked to approve, and a worked example. See
+[`orchestrator/ARCHITECTURE.md`](orchestrator/ARCHITECTURE.md) for the
 orchestration model and control flow, [`orchestrator/POLICY.md`](orchestrator/POLICY.md)
 for what counts as high-impact, [`orchestrator/scenarios/`](orchestrator/scenarios/)
 for worked greenfield/brownfield/ambiguous examples, and
